@@ -1,0 +1,15 @@
+
+<rdf:RDF 
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:mit="http://www.mit.edu/">
+
+<rdf:Description 
+rdf:about="http://www.example.org/ex/webDonnees.html">
+	<rdf:type rdf:resource="http://www.example.org/ex/webDonnees.html/Text"/>
+	<dc:creator rdf:resource="http://www.lsis.org/sellamis"/>
+	<dc:subject rdf:resource="http://linkeddata.org"/>
+	<dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#year">2018</dc:date>
+   <dc:title>SPARQL Tutorial</dc:title>
+</rdf:Description>
+ </rdf:RDF>
