@@ -1,57 +1,51 @@
 package fr.univamu.webdesdonnees.weather.services;
 
-import java.io.InputStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 
+import org.apache.commons.text.TextStringBuilder;
 import org.apache.jena.datatypes.xsd.XSDDateTime;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecution;
-import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.query.ResultSetFactory;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.riot.RDFDataMgr;
 import org.springframework.stereotype.Repository;
 
+import fr.univamu.webdesdonnees.core.services.BaseSparqlRepository;
 import fr.univamu.webdesdonnees.weather.model.Measure;
 
 @Repository
-public class SparqlTemperatureRepository implements TemperatureRepository {
+public class SparqlTemperatureRepository extends BaseSparqlRepository implements TemperatureRepository {
 
-	private Model model;
-	private String inputFileName = "temperature.ttl";
-
-	private String prefixes = "PREFIX dc:<http://purl.org/dc/elements/1.1/> "
-			+ " PREFIX ct:<http://www.insight-centre.org/citytraffic#> "
-			+ " PREFIX ns1:<http://purl.oclc.org/NET/ssnx/ssn#>" + " PREFIX prov:<http://purl.org/NET/provenance.owl#> "
-			+ " PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
-			+ " PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#> "
-			+ " PREFIX sao:<http://iot.ee.surrey.ac.uk/citypulse/resources/ontologies/sao.ttl> "
-			+ " PREFIX tl:<http://purl.org/NET/c4dm/timeline.owl#> "
-			+ " PREFIX xml:<http://www.w3.org/XML/1998/namespace> " + " PREFIX xsd:<http://www.w3.org/2001/XMLSchema#> "
-			+ " PREFIX unit0: <http://purl.oclc.org/NET/muo/ucum/unit/temperature#> ";
+	private String[] prefixes = { "PREFIX ct:<http://www.insight-centre.org/citytraffic#>",
+			"PREFIX ns1:<http://purl.oclc.org/NET/ssnx/ssn#>",
+			"PREFIX prov:<http://purl.org/NET/provenance.owl#>",
+			"PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>",
+			"PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>",
+			"PREFIX sao:<http://iot.ee.surrey.ac.uk/citypulse/resources/ontologies/sao.ttl>",
+			"PREFIX tl:<http://purl.org/NET/c4dm/timeline.owl#>",
+			"PREFIX xml:<http://www.w3.org/XML/1998/namespace>",
+			"PREFIX xsd:<http://www.w3.org/2001/XMLSchema#>",
+			"PREFIX unit0: <http://purl.oclc.org/NET/muo/ucum/unit/temperature#> " };
 
 	public SparqlTemperatureRepository() {
-		// Construction du modéle RDF et de la requête SPARQL
-		model = this.createDefaultModel(inputFileName);
+		super("temperature.ttl");
 	}
 
 	@Override
 	public Collection<Measure> getMeasures() {
-		// TODO Rajouter la date tcheh
-		String queryString = prefixes
-				+ "SELECT ?unit ?date ?value "
-				+ "WHERE { "
-				+ "?measure sao:hasUnitOfMeasurement ?unit ; "
-				+ "sao:value ?value ; "
-				+ "sao:time ?instant . "
-				+ "?instant tl:at ?date "
-				+ "} ";
+
+		TextStringBuilder sb = new TextStringBuilder();
+		String queryString = sb.appendWithSeparators(prefixes, "\n")
+				.appendln("SELECT ?unit ?date ?value ?id")
+				.appendln("WHERE { ")
+				.appendln("?id sao:hasUnitOfMeasurement ?unit ;")
+				.appendln("sao:value ?value ;")
+				.appendln("sao:time ?instant .")
+				.appendln("?instant tl:at ?date")
+				.appendln("} ")
+				.build();
 
 		ResultSet results = this.runQuery(queryString);
 
@@ -60,11 +54,13 @@ public class SparqlTemperatureRepository implements TemperatureRepository {
 			QuerySolution row = results.next();
 			String unit = row.getResource("unit").getLocalName();
 			double value = Double.parseDouble(row.getLiteral("value").getString());
-
+			String id = row.getResource("id").getLocalName();
 			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
-			Date time = dateTime.asCalendar().getTime();
+			String fixedDateTime = dateTime.toString() + "+02:00";
+			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
+			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
 
-			Measure measure = new Measure(unit, time, value);
+			Measure measure = new Measure(unit, zonedDateTimeUTC, value, id);
 			measures.add(measure);
 		}
 		return measures;
@@ -77,14 +73,16 @@ public class SparqlTemperatureRepository implements TemperatureRepository {
 				+ id
 				+ ">";
 
-		String queryString = prefixes
-				+ "SELECT ?unit ?date ?value "
-				+ "WHERE { "
-				+ measureId + " sao:hasUnitOfMeasurement ?unit ; "
-				+ "sao:value ?value ; "
-				+ "sao:time ?instant . "
-				+ "?instant tl:at ?date "
-				+ "} ";
+		TextStringBuilder sb = new TextStringBuilder();
+		String queryString = sb.appendWithSeparators(prefixes, "\n")
+				.appendln("SELECT ?unit ?date ?value")
+				.appendln("WHERE { ")
+				.appendln("%s sao:hasUnitOfMeasurement ?unit ;", measureId)
+				.appendln("sao:value ?value ;")
+				.appendln("sao:time ?instant .")
+				.appendln("?instant tl:at ?date")
+				.appendln("} ")
+				.build();
 
 		ResultSet results = this.runQuery(queryString);
 
@@ -95,43 +93,44 @@ public class SparqlTemperatureRepository implements TemperatureRepository {
 			double value = Double.parseDouble(row.getLiteral("value").getString());
 
 			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
-			Date time = dateTime.asCalendar().getTime();
+			String fixedDateTime = dateTime.toString() + "+02:00";
+			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
+			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
 
-			measure = new Measure(unit, time, value);
+			measure = new Measure(unit, zonedDateTimeUTC, value, id);
 		}
 		return measure;
 	}
 
-	/**
-	 * Exécution d'une requête
-	 * 
-	 * @param queryString
-	 * @return
-	 */
-	private ResultSet runQuery(String queryString) {
-		Query query = QueryFactory.create(queryString);
-		QueryExecution qexec = QueryExecutionFactory.create(query, model);
-		ResultSet results = null;
-		try {
-			results = ResultSetFactory.copyResults(qexec.execSelect());
-		} finally {
-			qexec.close();
+	@Override
+	public Collection<Measure> getMeasureByName(String name) {
+
+		String measureName = "<http://iot.ee.surrey.ac.uk/citypulse/datasets/weather/aarhus_weather_temperature#"
+				+ name
+				+ ">";
+		TextStringBuilder sb = new TextStringBuilder();
+		String queryString = sb.appendWithSeparators(prefixes, "\n")
+				.appendln("SELECT ?unit ?date ?value")
+				.appendln("WHERE { ")
+				.appendln("%s sao:hasUnitOfMeasurement ?unit ;", measureName)
+
+				.build();
+		ResultSet results = this.runQuery(queryString);
+
+		ArrayList<Measure> measures = new ArrayList<Measure>();
+		while (results.hasNext()) {
+			QuerySolution row = results.next();
+			String unit = row.getResource("unit").getLocalName();
+			double value = Double.parseDouble(row.getLiteral("value").getString());
+			String id = row.getResource("id").getLocalName();
+			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
+			String fixedDateTime = dateTime.toString() + "+02:00";
+			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
+			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
+
+			Measure measure = new Measure(unit, zonedDateTimeUTC, value, id);
+			measures.add(measure);
 		}
-
-		return results;
+		return measures;
 	}
-
-	private Model createDefaultModel(String inputFileName) {
-		Model model = ModelFactory.createDefaultModel();
-		// use the RDFDataMgr to find the input file
-		InputStream in = RDFDataMgr.open(inputFileName);
-		if (in == null) {
-			throw new IllegalArgumentException("File: " + inputFileName + " not found");
-		}
-
-		// read the RDF/XML file
-		model.read(in, null, "TTL");
-		return model;
-	}
-
 }

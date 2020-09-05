@@ -1,22 +1,22 @@
 package fr.univamu.webdesdonnees.parking.model;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.ZonedDateTime;
 
 public class Measure implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private String unit;
-	private Date time;
+	private ZonedDateTime time;
 	private int value;
-	private String name;
+	private String id;
 	// private double localisation;
 
-	public Measure(String unit, Date time, int value, String name /* , double localisation */) {
+	public Measure(String unit, ZonedDateTime time, int value, String id /* double localisation */ ) {
 		this.unit = unit;
 		this.time = time;
 		this.value = value;
-		this.name = name;
+		this.id = id;
 		// this.localisation = localisation;
 
 	}
@@ -32,15 +32,15 @@ public class Measure implements Serializable {
 		this.unit = unit;
 	}
 
-	public Date getTime() {
+	public ZonedDateTime getTime() {
 		return time;
 	}
 
-	public void setTime(Date time) {
+	public void setTime(ZonedDateTime time) {
 		this.time = time;
 	}
 
-	public double getValue() {
+	public int getValue() {
 		return value;
 	}
 
@@ -48,12 +48,12 @@ public class Measure implements Serializable {
 		this.value = value;
 	}
 
-	public String getName() {
-		return name;
+	public String getId() {
+		return id;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setId(String id) {
+		this.id = id;
 	}
 
 //	public double getLocalisation() {
@@ -64,4 +64,17 @@ public class Measure implements Serializable {
 //		this.localisation = localisation;
 //	}
 
+	@Override
+	public boolean equals(Object other) {
+		if (other instanceof Measure) {
+			Measure otherMeasure = (Measure) other;
+			return this.id.equals(otherMeasure.id);
+		}
+		return false;
+	}
+
+	@Override
+	public String toString() {
+		return "{ id: " + id + " unit: " + unit + " }";
+	}
 }

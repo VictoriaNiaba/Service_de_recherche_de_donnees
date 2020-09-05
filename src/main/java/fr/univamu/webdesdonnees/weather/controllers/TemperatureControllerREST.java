@@ -7,20 +7,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import fr.univamu.webdesdonnees.weather.model.Measure;
 import fr.univamu.webdesdonnees.weather.services.TemperatureRepository;
 
 @RestController
-@RequestMapping(value = "web-of-things/weather/temperature", produces = "application/json")
+@RequestMapping(value = "web-of-things/weather", produces = "application/json")
 public class TemperatureControllerREST {
 
 	@Autowired
 	private TemperatureRepository temperatureRepository;
 
 	@GetMapping("/measures")
-	public ResponseEntity<Collection<Measure>> getMeasures() {
+	public ResponseEntity<Collection<Measure>> getMeasures(
+			@RequestParam(value = "type", required = false) String type,
+			@RequestParam(value = "name", required = false) String name,
+			@RequestParam(value = "location", required = false) String location) {
+
 		Collection<Measure> measures = temperatureRepository.getMeasures();
 		return ResponseEntity.ok().body(measures);
 	}

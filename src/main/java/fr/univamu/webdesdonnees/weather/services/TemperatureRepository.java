@@ -10,4 +10,6 @@ public interface TemperatureRepository {
 
 	Measure getMeasureById(String id);
 
+	Collection<Measure> getMeasureByName(String name);
+
 }

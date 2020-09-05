@@ -1,20 +1,22 @@
 package fr.univamu.webdesdonnees.weather.model;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.ZonedDateTime;
 
 public class Measure implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
 	private String unit;
-	private Date time;
+	private ZonedDateTime time;
 	private double value;
+	private String id;
 
-	public Measure(String unit, Date time, double value) {
+	public Measure(String unit, ZonedDateTime time, double value, String id) {
 		this.unit = unit;
 		this.time = time;
 		this.value = value;
+		this.id = id;
 	}
 
 	public Measure() {
@@ -28,11 +30,11 @@ public class Measure implements Serializable {
 		this.unit = unit;
 	}
 
-	public Date getTime() {
+	public ZonedDateTime getTime() {
 		return time;
 	}
 
-	public void setTime(Date time) {
+	public void setTime(ZonedDateTime time) {
 		this.time = time;
 	}
 
@@ -44,4 +46,11 @@ public class Measure implements Serializable {
 		this.value = value;
 	}
 
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
 }
