@@ -1,6 +1,7 @@
 package fr.univamu.webdesdonnees.weather.controllers;
 
 import java.util.Collection;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,11 +23,9 @@ public class TemperatureControllerREST {
 
 	@GetMapping("/measures")
 	public ResponseEntity<Collection<Measure>> getMeasures(
-			@RequestParam(value = "type", required = false) String type,
-			@RequestParam(value = "name", required = false) String name,
-			@RequestParam(value = "location", required = false) String location) {
+			@RequestParam(value = "id") Optional<String> id) {
 
-		Collection<Measure> measures = temperatureRepository.getMeasures();
+		Collection<Measure> measures = temperatureRepository.getMeasures(id);
 		return ResponseEntity.ok().body(measures);
 	}
 

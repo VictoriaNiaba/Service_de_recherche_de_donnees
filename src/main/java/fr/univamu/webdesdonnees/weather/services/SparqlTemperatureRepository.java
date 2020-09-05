@@ -1,10 +1,8 @@
 package fr.univamu.webdesdonnees.weather.services;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.apache.commons.text.TextStringBuilder;
 import org.apache.jena.datatypes.xsd.XSDDateTime;
@@ -34,33 +32,39 @@ public class SparqlTemperatureRepository extends BaseSparqlRepository implements
 	}
 
 	@Override
-	public Collection<Measure> getMeasures() {
-
+	public Collection<Measure> getMeasures(Optional<String> idParam) {
+		
+		/*-------------------- Construction of the request ----------------------*/
 		TextStringBuilder sb = new TextStringBuilder();
-		String queryString = sb.appendWithSeparators(prefixes, "\n")
-				.appendln("SELECT ?unit ?date ?value ?id")
-				.appendln("WHERE { ")
-				.appendln("?id sao:hasUnitOfMeasurement ?unit ;")
-				.appendln("sao:value ?value ;")
-				.appendln("sao:time ?instant .")
-				.appendln("?instant tl:at ?date")
-				.appendln("} ")
-				.build();
-
+		sb.appendWithSeparators(prefixes, "\n")
+		  .appendln("SELECT ?unit ?date ?value ?id")
+		  .appendln("WHERE { ")
+		  .appendln("?id sao:hasUnitOfMeasurement ?unit ;")
+		  .appendln("sao:value ?value ;")
+		  .appendln("sao:time ?instant .")
+		  .appendln("?instant tl:at ?date .");
+		// Filter clauses
+		String tempPrefix = "http://iot.ee.surrey.ac.uk/citypulse/datasets/weather/aarhus_weather_temperature#";
+		idParam.map(value -> "FILTER strstarts(str(?id), '" + tempPrefix + value + "')")
+			.ifPresent(sb::appendln);
+		// End of the query
+		String queryString = sb.appendln("} ").build();
+		
+		/*-------------------- Request execution -----------------------*/
 		ResultSet results = this.runQuery(queryString);
 
+		/*-------------------- Results formatting ----------------------*/
 		ArrayList<Measure> measures = new ArrayList<Measure>();
 		while (results.hasNext()) {
 			QuerySolution row = results.next();
-			String unit = row.getResource("unit").getLocalName();
-			double value = Double.parseDouble(row.getLiteral("value").getString());
-			String id = row.getResource("id").getLocalName();
-			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
-			String fixedDateTime = dateTime.toString() + "+02:00";
-			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
-			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
 
-			Measure measure = new Measure(unit, zonedDateTimeUTC, value, id);
+			Measure measure = Measure.builder()
+				.id(row.getResource("id").getLocalName())
+				.unit(row.getResource("unit").getLocalName())
+				.value(Double.parseDouble(row.getLiteral("value").getString()))
+				.time(toUTC((XSDDateTime) row.getLiteral("date").getValue()))
+				.build();
+
 			measures.add(measure);
 		}
 		return measures;
@@ -89,48 +93,14 @@ public class SparqlTemperatureRepository extends BaseSparqlRepository implements
 		Measure measure = null;
 		if (results.hasNext()) {
 			QuerySolution row = results.next();
-			String unit = row.getResource("unit").getLocalName();
-			double value = Double.parseDouble(row.getLiteral("value").getString());
-
-			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
-			String fixedDateTime = dateTime.toString() + "+02:00";
-			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
-			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
-
-			measure = new Measure(unit, zonedDateTimeUTC, value, id);
+			
+			measure = Measure.builder()
+					.id(row.getResource("id").getLocalName())
+					.unit(row.getResource("unit").getLocalName())
+					.value(Double.parseDouble(row.getLiteral("value").getString()))
+					.time(toUTC((XSDDateTime) row.getLiteral("date").getValue()))
+					.build();
 		}
 		return measure;
-	}
-
-	@Override
-	public Collection<Measure> getMeasureByName(String name) {
-
-		String measureName = "<http://iot.ee.surrey.ac.uk/citypulse/datasets/weather/aarhus_weather_temperature#"
-				+ name
-				+ ">";
-		TextStringBuilder sb = new TextStringBuilder();
-		String queryString = sb.appendWithSeparators(prefixes, "\n")
-				.appendln("SELECT ?unit ?date ?value")
-				.appendln("WHERE { ")
-				.appendln("%s sao:hasUnitOfMeasurement ?unit ;", measureName)
-
-				.build();
-		ResultSet results = this.runQuery(queryString);
-
-		ArrayList<Measure> measures = new ArrayList<Measure>();
-		while (results.hasNext()) {
-			QuerySolution row = results.next();
-			String unit = row.getResource("unit").getLocalName();
-			double value = Double.parseDouble(row.getLiteral("value").getString());
-			String id = row.getResource("id").getLocalName();
-			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
-			String fixedDateTime = dateTime.toString() + "+02:00";
-			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
-			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
-
-			Measure measure = new Measure(unit, zonedDateTimeUTC, value, id);
-			measures.add(measure);
-		}
-		return measures;
 	}
 }

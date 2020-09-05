@@ -1,7 +1,11 @@
 package fr.univamu.webdesdonnees.core.services;
 
 import java.io.InputStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
+import org.apache.jena.datatypes.xsd.XSDDateTime;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -44,5 +48,13 @@ public abstract class BaseSparqlRepository {
 		// read the RDF/XML file
 		model.read(in, null, "TTL");
 		return model;
+	}
+	
+	protected ZonedDateTime toUTC(XSDDateTime dateTime) {
+		String fixedDateTime = dateTime.toString() + "+02:00";
+		ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
+		ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
+		
+		return zonedDateTimeUTC;
 	}
 }
