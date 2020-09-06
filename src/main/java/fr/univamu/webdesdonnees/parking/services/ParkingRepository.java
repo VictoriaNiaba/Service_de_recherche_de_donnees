@@ -2,11 +2,11 @@ package fr.univamu.webdesdonnees.parking.services;
 
 import java.util.Collection;
 
-import fr.univamu.webdesdonnees.parking.model.Measure;
+import fr.univamu.webdesdonnees.core.model.Measure;
 
 public interface ParkingRepository {
 
-	Collection<Measure> getMeasures();
+	Collection<Measure<Integer>> getMeasures(String idParam, String locationParam);
 
-	Measure getMeasureById(String id);
+	Measure<Integer> getMeasureById(String id);
 }

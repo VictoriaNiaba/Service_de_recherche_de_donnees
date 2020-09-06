@@ -12,8 +12,8 @@ import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.springframework.stereotype.Repository;
 
+import fr.univamu.webdesdonnees.core.model.Measure;
 import fr.univamu.webdesdonnees.core.services.BaseSparqlRepository;
-import fr.univamu.webdesdonnees.parking.model.Measure;
 
 @Repository
 public class SparqlParkingRepository extends BaseSparqlRepository implements ParkingRepository {
@@ -36,40 +36,72 @@ public class SparqlParkingRepository extends BaseSparqlRepository implements Par
 	}
 
 	@Override
-	public Collection<Measure> getMeasures() {
+	public Collection<Measure<Integer>> getMeasures(String idParam, String locationParam) {
 
 		TextStringBuilder sb = new TextStringBuilder();
-		String queryString = sb.appendWithSeparators(prefixes, "\n")
-				.appendln("SELECT ?unit ?date ?value ?id")
+		sb.appendWithSeparators(prefixes, "\n")
+				.appendln("SELECT ?unit ?date ?value ?id ?lat ?lon ?location")
 				.appendln("WHERE {")
 				.appendln("?id sao:hasUnitOfMeasurement ?unit ;")
 				.appendln("sao:value ?value ;")
 				.appendln("sao:time ?instant .")
-				.appendln("?instant tl:at ?date")
-				.appendln("}")
-				.build();
+				.appendln("?instant tl:at ?date .")
+				.appendln("?id ns1:featureOfInterest ?location .")
+				.appendln("?location ct:hasFirstNode ?firstNode .")
+				.appendln("?firstNode ct:hasLatitude ?lat ;")
+				.appendln("ct:hasLongitude ?lon .");
+
+		// Filter clauses
+		String idPrefix = "http://iot.ee.surrey.ac.uk/citypulse/datasets/parking/parkingDataStream#";
+
+		if (idParam != null) {
+			String filter = "FILTER strstarts(str(?id), '" + idPrefix + idParam + "')";
+			sb.appendln(filter);
+		}
+		String locationPrefix = "file://" + System.getProperty("user.dir") + "/";
+
+		if (locationParam != null) {
+			String filter = "FILTER strstarts(str(?location), '" + locationPrefix + locationParam + "')";
+			sb.appendln(filter);
+		}
+
+		String queryString = sb.appendln("}").build();
 
 		ResultSet results = this.runQuery(queryString);
 
-		ArrayList<Measure> measures = new ArrayList<Measure>();
+		ArrayList<Measure<Integer>> measures = new ArrayList<Measure<Integer>>();
 		while (results.hasNext()) {
 			QuerySolution row = results.next();
 			String unit = row.getResource("unit").getLocalName();
 			int value = Integer.parseInt(row.getLiteral("value").getString());
 			String id = row.getResource("id").getLocalName();
+			String location = row.getResource("location").getNameSpace();
+			location = location.substring(location.lastIndexOf('/') + 1);
+			location = location.substring(0, location.indexOf('#'));
+			double latitude = Double.parseDouble(row.getLiteral("lat").getString());
+			double longitude = Double.parseDouble(row.getLiteral("lon").getString());
 
 			XSDDateTime dateTime = (XSDDateTime) row.getLiteral("date").getValue();
 			String fixedDateTime = dateTime.toString() + "+02:00";
 			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
 			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
-			Measure measure = new Measure(unit, zonedDateTimeUTC, value, id);
+			Measure<Integer> measure = new Measure<Integer>();
+			measure.setId(id);
+			measure.setTime(zonedDateTimeUTC);
+			measure.setUnit(unit);
+			measure.setValue(value);
+			measure.setDomain("parking-data-stream");
+			measure.setLocation(location);
+			measure.setLatitude(latitude);
+			measure.setLongitude(longitude);
+
 			measures.add(measure);
 		}
 		return measures;
 	}
 
 	@Override
-	public Measure getMeasureById(String id) {
+	public Measure<Integer> getMeasureById(String id) {
 
 		String measureId = "<http://iot.ee.surrey.ac.uk/citypulse/datasets/parking/parkingDataStream#"
 				+ id
@@ -88,7 +120,7 @@ public class SparqlParkingRepository extends BaseSparqlRepository implements Par
 
 		ResultSet results = this.runQuery(queryString);
 
-		Measure measure = null;
+		Measure<Integer> measure = null;
 		if (results.hasNext()) {
 			QuerySolution row = results.next();
 			String unit = row.getResource("unit").getLocalName();
@@ -99,7 +131,12 @@ public class SparqlParkingRepository extends BaseSparqlRepository implements Par
 			ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
 			ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
 
-			measure = new Measure(unit, zonedDateTimeUTC, value, id);
+			measure = new Measure<Integer>();
+			measure.setId(id);
+			measure.setTime(zonedDateTimeUTC);
+			measure.setUnit(unit);
+			measure.setValue(value);
+			measure.setDomain("parking-data-stream");
 		}
 		return measure;
 	}

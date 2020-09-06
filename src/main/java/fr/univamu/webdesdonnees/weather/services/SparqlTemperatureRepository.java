@@ -2,7 +2,6 @@ package fr.univamu.webdesdonnees.weather.services;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Optional;
 
 import org.apache.commons.text.TextStringBuilder;
 import org.apache.jena.datatypes.xsd.XSDDateTime;
@@ -10,8 +9,8 @@ import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.springframework.stereotype.Repository;
 
+import fr.univamu.webdesdonnees.core.model.Measure;
 import fr.univamu.webdesdonnees.core.services.BaseSparqlRepository;
-import fr.univamu.webdesdonnees.weather.model.Measure;
 
 @Repository
 public class SparqlTemperatureRepository extends BaseSparqlRepository implements TemperatureRepository {
@@ -32,46 +31,53 @@ public class SparqlTemperatureRepository extends BaseSparqlRepository implements
 	}
 
 	@Override
-	public Collection<Measure> getMeasures(Optional<String> idParam) {
-		
+	public Collection<Measure<Double>> getMeasures(String id) {
+
 		/*-------------------- Construction of the request ----------------------*/
 		TextStringBuilder sb = new TextStringBuilder();
 		sb.appendWithSeparators(prefixes, "\n")
-		  .appendln("SELECT ?unit ?date ?value ?id")
-		  .appendln("WHERE { ")
-		  .appendln("?id sao:hasUnitOfMeasurement ?unit ;")
-		  .appendln("sao:value ?value ;")
-		  .appendln("sao:time ?instant .")
-		  .appendln("?instant tl:at ?date .");
+				.appendln("SELECT ?unit ?date ?value ?id")
+				.appendln("WHERE { ")
+				.appendln("?id sao:hasUnitOfMeasurement ?unit ;")
+				.appendln("sao:value ?value ;")
+				.appendln("sao:time ?instant .")
+				.appendln("?instant tl:at ?date .");
 		// Filter clauses
 		String tempPrefix = "http://iot.ee.surrey.ac.uk/citypulse/datasets/weather/aarhus_weather_temperature#";
-		idParam.map(value -> "FILTER strstarts(str(?id), '" + tempPrefix + value + "')")
-			.ifPresent(sb::appendln);
+
+//		id.map(value -> "FILTER strstarts(str(?id), '" + tempPrefix + value + "')")
+//		  .ifPresent(value -> sb.appendln(value));
+
+		if (id != null) {
+			String filter = "FILTER strstarts(str(?id), '" + tempPrefix + id + "')";
+			sb.appendln(filter);
+		}
+
 		// End of the query
-		String queryString = sb.appendln("} ").build();
-		
+		String queryString = sb.appendln("}").build();
+
 		/*-------------------- Request execution -----------------------*/
 		ResultSet results = this.runQuery(queryString);
 
 		/*-------------------- Results formatting ----------------------*/
-		ArrayList<Measure> measures = new ArrayList<Measure>();
+		ArrayList<Measure<Double>> measures = new ArrayList<Measure<Double>>();
 		while (results.hasNext()) {
 			QuerySolution row = results.next();
 
-			Measure measure = Measure.builder()
-				.id(row.getResource("id").getLocalName())
-				.unit(row.getResource("unit").getLocalName())
-				.value(Double.parseDouble(row.getLiteral("value").getString()))
-				.time(toUTC((XSDDateTime) row.getLiteral("date").getValue()))
-				.build();
+			Measure<Double> measure = new Measure<Double>();
+			measure.setId(row.getResource("id").getLocalName());
+			measure.setUnit(row.getResource("unit").getLocalName());
+			measure.setValue(Double.parseDouble(row.getLiteral("value").getString()));
+			measure.setTime(toUTC((XSDDateTime) row.getLiteral("date").getValue()));
 
 			measures.add(measure);
 		}
+
 		return measures;
 	}
 
 	@Override
-	public Measure getMeasureById(String id) {
+	public Measure<Double> getMeasureById(String id) {
 
 		String measureId = "<http://iot.ee.surrey.ac.uk/citypulse/datasets/weather/aarhus_weather_temperature#"
 				+ id
@@ -90,16 +96,15 @@ public class SparqlTemperatureRepository extends BaseSparqlRepository implements
 
 		ResultSet results = this.runQuery(queryString);
 
-		Measure measure = null;
+		Measure<Double> measure = null;
 		if (results.hasNext()) {
 			QuerySolution row = results.next();
-			
-			measure = Measure.builder()
-					.id(row.getResource("id").getLocalName())
-					.unit(row.getResource("unit").getLocalName())
-					.value(Double.parseDouble(row.getLiteral("value").getString()))
-					.time(toUTC((XSDDateTime) row.getLiteral("date").getValue()))
-					.build();
+
+			measure = new Measure<Double>();
+			measure.setId(row.getResource("id").getLocalName());
+			measure.setUnit(row.getResource("unit").getLocalName());
+			measure.setValue(Double.parseDouble(row.getLiteral("value").getString()));
+			measure.setTime(toUTC((XSDDateTime) row.getLiteral("date").getValue()));
 		}
 		return measure;
 	}

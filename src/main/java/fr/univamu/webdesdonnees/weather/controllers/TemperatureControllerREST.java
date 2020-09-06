@@ -1,7 +1,6 @@
 package fr.univamu.webdesdonnees.weather.controllers;
 
 import java.util.Collection;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import fr.univamu.webdesdonnees.weather.model.Measure;
+import fr.univamu.webdesdonnees.core.model.Measure;
 import fr.univamu.webdesdonnees.weather.services.TemperatureRepository;
 
 @RestController
@@ -22,16 +21,16 @@ public class TemperatureControllerREST {
 	private TemperatureRepository temperatureRepository;
 
 	@GetMapping("/measures")
-	public ResponseEntity<Collection<Measure>> getMeasures(
-			@RequestParam(value = "id") Optional<String> id) {
+	public ResponseEntity<Collection<Measure<Double>>> getMeasures(
+			@RequestParam(value = "id", required = false) String id) {
 
-		Collection<Measure> measures = temperatureRepository.getMeasures(id);
+		Collection<Measure<Double>> measures = temperatureRepository.getMeasures(id);
 		return ResponseEntity.ok().body(measures);
 	}
 
 	@GetMapping("/measures/{measure-id}")
-	public ResponseEntity<Measure> getMeasureById(@PathVariable("measure-id") String id) {
-		Measure measure = temperatureRepository.getMeasureById(id);
+	public ResponseEntity<Measure<Double>> getMeasureById(@PathVariable("measure-id") String id) {
+		Measure<Double> measure = temperatureRepository.getMeasureById(id);
 
 		return ResponseEntity.ok().body(measure);
 	}
