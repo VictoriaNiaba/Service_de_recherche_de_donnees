@@ -15,10 +15,6 @@
 	<name>web-des-donnees</name>
 	<description>TP3 </description>
 
-	<properties>
-		<java.version>11</java.version>
-	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
