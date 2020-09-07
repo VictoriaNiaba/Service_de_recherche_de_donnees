@@ -11,7 +11,7 @@ export class ParkingService {
   constructor(private http: HttpClient) { }
 
   getMeasures(id?: string): Observable<Measure[]> {
-    let query = "http://localhost:8080/web-of-things/parking/measures";
+    let query = "/web-of-things/parking/measures";
 
     if (id) {
       query += "?id=" + id;
