@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import fr.univamu.webdesdonnees.core.model.Measure;
 import fr.univamu.webdesdonnees.parking.services.ParkingRepository;
 
+@CrossOrigin
 @RestController
 @RequestMapping(value = "web-of-things/parking", produces = "application/json")
 public class ParkingControllerREST {
