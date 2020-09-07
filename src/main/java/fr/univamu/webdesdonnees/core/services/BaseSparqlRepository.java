@@ -1,60 +1,67 @@
 package fr.univamu.webdesdonnees.core.services;
 
-import java.io.InputStream;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-import org.apache.jena.datatypes.xsd.XSDDateTime;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecution;
-import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.query.ResultSetFactory;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.riot.RDFDataMgr;
+import org.springframework.beans.factory.annotation.Autowired;
 
-public abstract class BaseSparqlRepository {
-	private Model model;
+import fr.univamu.webdesdonnees.core.model.JenaMeasure;
+import fr.univamu.webdesdonnees.core.model.Measure;
+import lombok.Setter;
 
-	public BaseSparqlRepository(String inputFileName) {
-		// Construction du modéle RDF et de la requête SPARQL
-		model = this.createDefaultModel(inputFileName);
-	}
-
-	protected ResultSet runQuery(String queryString) {
-		Query query = QueryFactory.create(queryString);
-		QueryExecution qexec = QueryExecutionFactory.create(query, model);
-		ResultSet results = null;
-		try {
-			results = ResultSetFactory.copyResults(qexec.execSelect());
-		} finally {
-			qexec.close();
-		}
-
-		return results;
-	}
-
-	private Model createDefaultModel(String inputFileName) {
-		Model model = ModelFactory.createDefaultModel();
-		// use the RDFDataMgr to find the input file
-		InputStream in = RDFDataMgr.open(inputFileName);
-		if (in == null) {
-			throw new IllegalArgumentException("File: " + inputFileName + " not found");
-		}
-
-		// read the RDF/XML file
-		model.read(in, null, "TTL");
-		return model;
-	}
+public abstract class BaseSparqlRepository<T extends Serializable> {
+	protected @Setter String[] prefixes;
+	protected @Autowired MeasureMapper<T> mapper;
+	protected SparqlQueryExecutor queryExecutor;
+	protected @Autowired SparqlQueryBuilder queryBuilder;
+	protected Class<T> clazz;
 	
-	protected ZonedDateTime toUTC(XSDDateTime dateTime) {
-		String fixedDateTime = dateTime.toString() + "+02:00";
-		ZonedDateTime zonedDateTime = ZonedDateTime.parse(fixedDateTime, DateTimeFormatter.ISO_DATE_TIME);
-		ZonedDateTime zonedDateTimeUTC = zonedDateTime.withZoneSameInstant(ZoneId.of("UTC"));
+	public BaseSparqlRepository(String inputFileName, Class<T> clazz) {
+		// Construction du modéle RDF et de la requête SPARQL
+		this.queryExecutor = new SparqlQueryExecutor(inputFileName);
+		this.clazz = clazz;
+	}
+	public BaseSparqlRepository(String inputFileNames[], Class<T> clazz) {
+		this.queryExecutor = new SparqlQueryExecutor(inputFileNames);
+		this.clazz = clazz;
+	}
+
+	public Collection<Measure<T>> searchMeasures(Optional<String> id, Optional<String> location) {
+
+		String query = queryBuilder.buildGetMeasuresQuery(prefixes, id, location);
+		ResultSet results = queryExecutor.runQuery(query);
+
+		ArrayList<JenaMeasure> jenaMeasures = new ArrayList<JenaMeasure>();
+		while (results.hasNext()) {
+			QuerySolution row = results.next();
+			JenaMeasure jenaMeasure = mapper.querySolutionToJenaMeasure(row);
+			jenaMeasures.add(jenaMeasure);
+		}
 		
-		return zonedDateTimeUTC;
+		return jenaMeasures.stream()
+				.map(jenaMeasure -> mapper.jenaMeasureToMeasure(jenaMeasure, clazz))
+				.collect(Collectors.toList());
+	}
+
+	public Measure<T> getMeasureById(String id) {
+
+		String fullId = "<http://iot.ee.surrey.ac.uk/citypulse/datasets/weather/aarhus_weather_temperature#" 
+				+ id
+				+ ">";
+		
+		String query = queryBuilder.buildGetMeasureByIdQuery(prefixes, fullId);
+		ResultSet results = queryExecutor.runQuery(query);
+
+		JenaMeasure jenaMeasure = null;
+		if (results.hasNext()) {
+			QuerySolution row = results.next();
+			jenaMeasure = mapper.querySolutionToJenaMeasure(row);
+		}
+		return mapper.jenaMeasureToMeasure(jenaMeasure, clazz);
 	}
 }

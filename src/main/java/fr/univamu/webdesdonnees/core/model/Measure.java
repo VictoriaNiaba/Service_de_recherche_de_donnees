@@ -17,4 +17,5 @@ public class Measure<T extends Serializable> implements Serializable {
 	private Double longitude;
 	private Double latitude;
 	private String domain;
+	private String streamEvent;
 }

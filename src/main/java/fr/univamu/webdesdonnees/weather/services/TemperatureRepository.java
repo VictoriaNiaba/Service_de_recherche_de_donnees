@@ -1,13 +1,15 @@
 package fr.univamu.webdesdonnees.weather.services;
 
+import java.io.Serializable;
 import java.util.Collection;
+import java.util.Optional;
 
 import fr.univamu.webdesdonnees.core.model.Measure;
 
 public interface TemperatureRepository {
 
-	Collection<Measure<Double>> getMeasures(String id);
+	Collection<Measure<Serializable>> getMeasures(Optional<String> id);
 
-	Measure<Double> getMeasureById(String id);
+	Measure<Serializable> getMeasureById(String id);
 
 }

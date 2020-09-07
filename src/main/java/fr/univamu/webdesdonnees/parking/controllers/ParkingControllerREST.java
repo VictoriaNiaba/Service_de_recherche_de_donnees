@@ -1,6 +1,7 @@
 package fr.univamu.webdesdonnees.parking.controllers;
 
 import java.util.Collection;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,13 +17,15 @@ import fr.univamu.webdesdonnees.parking.services.ParkingRepository;
 @RestController
 @RequestMapping(value = "web-of-things/parking", produces = "application/json")
 public class ParkingControllerREST {
+	
 	@Autowired
 	private ParkingRepository parkingRepository;
 
 	@GetMapping("/measures")
 	public ResponseEntity<Collection<Measure<Integer>>> getMeasures(
-			@RequestParam(value = "id", required = false) String id,
-			@RequestParam(value = "location", required = false) String location) {
+			@RequestParam(value = "id") Optional<String> id,
+			@RequestParam(value = "location") Optional<String> location) {
+		
 		Collection<Measure<Integer>> measures = parkingRepository.getMeasures(id, location);
 		return ResponseEntity.ok().body(measures);
 	}
@@ -30,7 +33,6 @@ public class ParkingControllerREST {
 	@GetMapping("/measures/{measure-id}")
 	public ResponseEntity<Measure<Integer>> getMeasureById(@PathVariable("measure-id") String id) {
 		Measure<Integer> measure = parkingRepository.getMeasureById(id);
-
 		return ResponseEntity.ok().body(measure);
 	}
 

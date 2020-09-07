@@ -1,6 +1,8 @@
 package fr.univamu.webdesdonnees.weather.controllers;
 
+import java.io.Serializable;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,21 +18,20 @@ import fr.univamu.webdesdonnees.weather.services.TemperatureRepository;
 @RestController
 @RequestMapping(value = "web-of-things/weather", produces = "application/json")
 public class TemperatureControllerREST {
-
 	@Autowired
 	private TemperatureRepository temperatureRepository;
 
 	@GetMapping("/measures")
-	public ResponseEntity<Collection<Measure<Double>>> getMeasures(
-			@RequestParam(value = "id", required = false) String id) {
+	public ResponseEntity<Collection<Measure<Serializable>>> getMeasures(
+			@RequestParam(value = "id") Optional<String> id) {
 
-		Collection<Measure<Double>> measures = temperatureRepository.getMeasures(id);
+		Collection<Measure<Serializable>> measures = temperatureRepository.getMeasures(id);
 		return ResponseEntity.ok().body(measures);
 	}
 
 	@GetMapping("/measures/{measure-id}")
-	public ResponseEntity<Measure<Double>> getMeasureById(@PathVariable("measure-id") String id) {
-		Measure<Double> measure = temperatureRepository.getMeasureById(id);
+	public ResponseEntity<Measure<Serializable>> getMeasureById(@PathVariable("measure-id") String id) {
+		Measure<Serializable> measure = temperatureRepository.getMeasureById(id);
 
 		return ResponseEntity.ok().body(measure);
 	}
