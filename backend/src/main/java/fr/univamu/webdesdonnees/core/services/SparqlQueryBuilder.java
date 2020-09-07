@@ -28,8 +28,8 @@ public class SparqlQueryBuilder {
 		// Clauses de filtrage
 		idParam.ifPresent(value -> sb.appendln("FILTER strstarts(str(?id), concat(str(?streamEvent), " + "'#" + value + "'))"));
 		locationParam.ifPresent(value -> sb.appendln("FILTER strstarts(str(?location), '" + value + "')"));
-
-		return sb.appendln("}").build();
+		
+		return sb.appendln("}").appendln("LIMIT 20").build();
 	}
 
 	public String buildGetMeasureByIdQuery(String[] prefixes, String id) {
