@@ -9,7 +9,9 @@
         </mat-form-field>
     </form>
       
+
     <div class="mat-elevation-z1 mt-2">
+        <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
         <table mat-table [dataSource]="dataSource">
     
         <!-- Position Column -->

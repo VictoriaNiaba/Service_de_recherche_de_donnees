@@ -4,8 +4,8 @@ import { MatPaginator } from '@angular/material/paginator';
 import { ParkingService } from './parking.service';
 import { Measure } from '../core/model/measure/measure';
 import { FormControl } from '@angular/forms';
-import { Observable } from 'rxjs';
-import { map, startWith, debounceTime } from 'rxjs/operators';
+import { Observable, timer } from 'rxjs';
+import { map, startWith, debounceTime, finalize, mapTo, takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-parking',
@@ -16,6 +16,7 @@ export class ParkingComponent implements AfterViewInit, OnInit {
   displayedColumns: string[] = ['time', 'id', 'value', 'unit'];
   dataSource = new MatTableDataSource<Measure>([]);
   @ViewChild(MatPaginator) paginator: MatPaginator;
+  loading: boolean = false;
 
   myControl = new FormControl();
 
@@ -31,7 +32,19 @@ export class ParkingComponent implements AfterViewInit, OnInit {
   }
 
   private _updateDataSource(value?: string) {
-    this.parkingService.getMeasures(value).subscribe(measures => {
+    
+    const measures$ = this.parkingService.getMeasures(value).pipe(
+      finalize(() => this.loading = false)
+    );
+
+    const showLoadingIndicator$ = timer(1000).pipe(
+      mapTo(true),       // turn the value into `true`, meaning loading is shown
+      takeUntil(measures$) // emit only if result$ wont emit before 1s
+    );
+
+    showLoadingIndicator$.subscribe(value => this.loading = value);
+
+    measures$.subscribe(measures => {
       this.dataSource.data = measures;
     });
   }
